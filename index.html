@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#FFF0F5">
+    
+    <meta name="apple-mobile-web-app-title" content="米飛記帳">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>米飛臨時記帳</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐰</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22white%22/><text x=%2250%22 y=%2250%22 font-size=%2280%22 text-anchor=%22middle%22 dy=%22.35em%22>🐰</text></svg>">
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Nunito', 'Noto Sans TC', sans-serif; background-color: #FFF0F5; -webkit-tap-highlight-color: transparent; height: 100vh; height: 100dvh; }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .header-safe { padding-top: max(env(safe-area-inset-top), 40px); padding-bottom: 1rem; }
+        .modal-safe-top { margin-top: max(env(safe-area-inset-top), 120px); }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        input, textarea, select { font-size: 16px !important; }
+        .input-cute { width: 100%; background: #FFF5F7; border-radius: 1rem; padding: 0.8rem; font-weight: bold; color: #8E5E6F; outline: none; border: 2px solid transparent; transition: all 0.2s; }
+        .input-cute:focus { background: white; border-color: #FBCFE8; box-shadow: 0 0 0 2px #FCE7F3; }
+        .btn-cute { width: 100%; background: linear-gradient(to right, #F472B6, #FB7185); color: white; font-weight: 900; padding: 1rem; border-radius: 1rem; box-shadow: 0 4px 12px rgba(251, 113, 133, 0.3); transition: transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .btn-cute:active { transform: scale(0.98); }
+        .toast { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(131, 24, 67, 0.9); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; z-index: 100; animation: fadeIn 0.3s; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAvYTOANehIHISUyklmjRy2SxSX4tL1Vw0",
+            authDomain: "miffymoneyv2.firebaseapp.com",
+            projectId: "miffymoneyv2",
+            storageBucket: "miffymoneyv2.firebasestorage.app",
+            messagingSenderId: "433736293826",
+            appId: "1:433736293826:web:4c1d861eff4c756c9b8a5b"
+        };
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            window.fbAuth = getAuth(app);
+            window.fbDb = getFirestore(app);
+            window.fbCreateUser = createUserWithEmailAndPassword;
+            window.fbSignIn = signInWithEmailAndPassword;
+            window.fbOnAuth = onAuthStateChanged;
+            window.fbSignOut = signOut;
+            window.fbDoc = doc;
+            window.fbSetDoc = setDoc;
+            window.fbUpdateDoc = updateDoc; 
+            window.fbOnSnapshot = onSnapshot;
+            window.isFirebaseInitialized = true;
+        } catch (e) {
+            console.error("Firebase Init Error:", e);
+        }
+    </script>
+
+    <script type="text/babel">
+        try { if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels); } catch(e) {}
+
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        const LOCATIONS = [
+            { id: 'moomin', name: '姆明', icon: '🦛', color: 'bg-[#E0F2FE] text-[#0369A1] border-[#BAE6FD]' },
+            { id: 'miffy', name: '米飛', icon: '🐰', color: 'bg-[#FFF7ED] text-[#EA580C] border-[#FFEDD5]' },
+            { id: 'lightmeal', name: '輕食', icon: '🥗', color: 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]' },
+            { id: 'patch', name: '燙布貼', icon: '🧵', color: 'bg-[#FAF5FF] text-[#7E22CE] border-[#E9D5FF]' }
+        ];
+        const HOLIDAYS = ['2025-12-25', '2026-01-01', '2026-02-17', '2026-02-18', '2026-02-19', '2026-02-20', '2026-02-28', '2026-04-04', '2026-04-05', '2026-05-01', '2026-06-19', '2026-09-25', '2026-10-10'];
+        const MOTIVATIONS = ["今天也是閃閃發光的一天！✨", "妳的努力就像魔法一樣強大 💖", "錢錢正在排隊進妳的錢包～💰", "加油加油！喝杯奶茶獎勵自己 🧋", "把班表填滿滿，買喜歡的東西！🎁", "累了就休息一下，兔子陪妳 🐰", "每一個小時都是妳的寶藏 💎"];
+        const WEEKDAYS = ['日','一','二','三','四','五','六'];
+
+        const calculateDuration = (start, end) => {
+            if (!start || !end) return 0;
+            const [h1, m1] = start.split(':').map(Number);
+            const [h2, m2] = end.split(':').map(Number);
+            const d1 = new Date(0, 0, 0, h1, m1);
+            const d2 = new Date(0, 0, 0, h2, m2);
+            if (d2 < d1) d2.setDate(d2.getDate() + 1);
+            const diff = (d2 - d1) / (1000 * 60 * 60);
+            return Math.round(diff * 10) / 10;
+        };
+
+        const isOvernight = (start, end) => {
+            if (!start || !end) return false;
+            const [h1, m1] = start.split(':').map(Number);
+            const [h2, m2] = end.split(':').map(Number);
+            return (h2 < h1) || (h2 === h1 && m2 < m1);
+        };
+
+        const calculatePayDetail = (hours, isHoliday, rate) => {
+            if (!hours || hours <= 0) return { total: 0 };
+            let pay = 0; let normalH = Math.min(hours, 8); let ot1H = 0; let ot2H = 0;
+            if (hours > 8) { let extra = hours - 8; ot1H = Math.min(extra, 2); if (extra > 2) ot2H = extra - 2; }
+            if (isHoliday) { pay += normalH * rate * 2; pay += ot1H * rate * 1.34; pay += ot2H * rate * 1.67; } 
+            else { pay += normalH * rate; pay += ot1H * rate * 1.34; pay += ot2H * rate * 1.67; }
+            return { total: Math.round(pay) };
+        };
+
+        const compressImage = (file) => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width; let height = img.height;
+                        const MAX_WIDTH = 400; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                        canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    }; img.src = e.target.result;
+                }; reader.readAsDataURL(file);
+            });
+        };
+
+        const formatDateKey = (date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+
+        // --- Custom Confirmation Modal ---
+        const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-start justify-center p-4">
+                    <div className="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl modal-safe-top transform scale-100 transition-all animate-[fadeIn_0.2s]">
+                        <div className="text-center mb-4">
+                            <div className="text-4xl mb-2">🐰</div>
+                            <h3 className="text-lg font-black text-stone-700">{message}</h3>
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={onCancel} className="flex-1 py-3 bg-stone-100 text-stone-500 rounded-xl font-bold">取消</button>
+                            <button onClick={onConfirm} className="flex-1 py-3 bg-red-400 text-white rounded-xl font-bold shadow-md shadow-red-100">確定</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Components ---
+        const LoginView = ({ forceReload }) => {
+            const [isRegister, setIsRegister] = useState(false);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = async () => {
+                if(!window.fbAuth) return alert("系統連線中...");
+                setError(''); setLoading(true);
+                try {
+                    if (isRegister) await window.fbCreateUser(window.fbAuth, email, password);
+                    else await window.fbSignIn(window.fbAuth, email, password);
+                } catch (e) {
+                    // 顯示更清楚的錯誤訊息
+                    switch (e.code) {
+                        case 'auth/user-not-found':
+                        case 'auth/invalid-credential':
+                            setError("找不到此帳號或密碼錯誤 🐰");
+                            break;
+                        case 'auth/wrong-password':
+                            setError("密碼打錯了，再試一次吧！🔑");
+                            break;
+                        case 'auth/email-already-in-use':
+                            setError("這個 Email 已經註冊過了，請直接登入 🏠");
+                            break;
+                        case 'auth/invalid-email':
+                            setError("Email 格式看起來怪怪的喔 📧");
+                            break;
+                        case 'auth/weak-password':
+                            setError("密碼太弱了，至少要6位數喔 💪");
+                            break;
+                        default:
+                            setError("發生錯誤：" + e.message);
+                    }
+                }
+                setLoading(false);
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-6 bg-[#FFF0F5]">
+                    <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-xl border border-pink-100 animate-[fadeIn_0.5s]">
+                        <div className="text-center mb-6"><div className="text-6xl mb-4">🐰</div><h1 className="text-2xl font-black text-[#8E5E6F]">米飛臨時記帳</h1><p className="text-pink-300 text-sm font-bold mt-2">存下每一份努力 💖</p></div>
+                        <div className="space-y-4">
+                            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} className="input-cute" placeholder="Email" />
+                            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="input-cute" placeholder="密碼" />
+                            {error && <div className="text-red-400 text-xs font-bold text-center bg-red-50 p-2 rounded-xl">{error}</div>}
+                            <button onClick={handleSubmit} disabled={loading} className="btn-cute">{loading ? '...' : (isRegister ? '註冊' : '登入')}</button>
+                            
+                            {/* 修正登入/註冊切換文字 */}
+                            <button onClick={()=>setIsRegister(!isRegister)} className="w-full text-center text-xs font-bold text-pink-400">
+                                {isRegister ? '已有帳號？登入' : '還沒有帳號？註冊一個'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ChartsView = ({ data }) => {
+            const lineRef = useRef(null); const barRef = useRef(null); const lChart = useRef(null); const bChart = useRef(null);
+            
+            useEffect(() => {
+                if (typeof Chart === 'undefined') return;
+                const monthMap = {};
+                const locMap = {}; LOCATIONS.forEach(l => locMap[l.name] = 0);
+
+                Object.keys(data).sort().forEach(key => {
+                    const m = `${new Date(key).getMonth() + 1}月`;
+                    const net = (data[key].calculatedPay || 0) - (Number(data[key].loss) || 0);
+                    monthMap[m] = (monthMap[m] || 0) + net;
+                    
+                    if (data[key].actLocations) {
+                        data[key].actLocations.forEach(lid => {
+                            const l = LOCATIONS.find(loc => loc.id === lid);
+                            if (l) locMap[l.name] += (data[key].actHours || 0);
+                        });
+                    }
+                });
+
+                try {
+                    if (lineRef.current) {
+                        if (lChart.current) lChart.current.destroy();
+                        lChart.current = new Chart(lineRef.current, {
+                            type: 'line',
+                            data: {
+                                labels: Object.keys(monthMap),
+                                datasets: [{ label: '收入', data: Object.values(monthMap), borderColor: '#F472B6', backgroundColor: '#FFF0F5', tension: 0.3, pointBackgroundColor: '#DB2777', pointRadius: 5 }]
+                            },
+                            options: { 
+                                plugins: { 
+                                    legend: {display:false},
+                                    datalabels: { align: 'top', anchor: 'end', color: '#DB2777', font: { weight: 'bold' }, formatter: (value) => value > 0 ? '$'+value : '' }
+                                }, 
+                                scales: { y: {display:false, beginAtZero:true}, x: {grid: {display:false}} } 
+                            }
+                        });
+                    }
+                    if (barRef.current) {
+                        if (bChart.current) bChart.current.destroy();
+                        bChart.current = new Chart(barRef.current, { 
+                            type: 'doughnut', 
+                            data: { 
+                                labels: Object.keys(locMap), 
+                                datasets: [{ 
+                                    data: Object.values(locMap), 
+                                    backgroundColor: ['#60A5FA', '#FB923C', '#4ADE80', '#C084FC'], 
+                                    borderWidth: 2, borderColor: '#ffffff'
+                                }] 
+                            }, 
+                            options: { plugins: { legend: {position:'right'}, datalabels: { display: false } }, cutout: '60%' } 
+                        });
+                    }
+                } catch(e) {}
+                return () => { if(lChart.current) lChart.current.destroy(); if(bChart.current) bChart.current.destroy(); };
+            }, [data]);
+
+            return ( 
+                <div className="space-y-4 pb-24"> 
+                    <div className="bg-white rounded-[2rem] p-5 shadow-sm"><h3 className="text-[#8E5E6F] font-bold mb-4">📈 收入曲線 (含金額)</h3><canvas ref={lineRef} height="200"></canvas></div>
+                    <div className="bg-white rounded-[2rem] p-5 shadow-sm"><h3 className="text-[#8E5E6F] font-bold mb-4">📍 地點統計</h3><canvas ref={barRef} height="200"></canvas></div>
+                </div> 
+            );
+        };
+
+        const ScheduleView = ({ entries }) => {
+            const sortedKeys = Object.keys(entries).filter(k => entries[k].planStart).sort((a, b) => new Date(b) - new Date(a));
+            return (
+                <div className="p-4 pb-24 animate-[fadeIn_0.3s]">
+                    <h2 className="text-xl font-black text-[#8E5E6F] mb-4 pl-2">🗓️ 我的班表</h2>
+                    <div className="space-y-3">
+                        {sortedKeys.length === 0 ? <div className="text-center text-pink-300 py-10 bg-white rounded-[2rem]">還沒有安排班表喔 🐰</div> : sortedKeys.map(key => {
+                            const entry = entries[key]; const date = new Date(key); const isFuture = new Date(key) >= new Date().setHours(0,0,0,0);
+                            return (
+                                <div key={key} className={`bg-white rounded-2xl p-4 shadow-sm border-l-4 ${isFuture ? 'border-pink-400' : 'border-stone-200 opacity-70'}`}>
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <div className="text-lg font-black text-stone-700">{date.getMonth()+1}/{date.getDate()} <span className="text-xs font-normal text-stone-400">({WEEKDAYS[date.getDay()]})</span></div>
+                                            <div className="text-pink-500 font-bold mt-1">
+                                                {entry.planStart} ~ {entry.planEnd}
+                                                {isOvernight(entry.planStart, entry.planEnd) && <span className="text-[10px] text-pink-400 ml-1">(+1)</span>}
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="flex gap-1">{entry.planLocations?.map(l=><span key={l}>{LOCATIONS.find(x=>x.id===l)?.icon}</span>)}</div>
+                                        </div>
+                                    </div>
+                                    {/* 班表超時提醒 */}
+                                    {entry.planHours > 8 && <div className="mt-2 text-xs font-bold text-pink-400 flex items-center gap-1">🐰 辛苦了！超過8小時囉，記得休息！🍵</div>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        const MemoView = ({ entries, reminders, setReminders, saveData }) => {
+            const [quote, setQuote] = useState(MOTIVATIONS[0]);
+            const [newTodo, setNewTodo] = useState("");
+            useEffect(() => { setQuote(MOTIVATIONS[Math.floor(Math.random()*MOTIVATIONS.length)]); }, []);
+            const handleAddTodo = () => { if (!newTodo.trim()) return; const newReminders = [...(reminders || []), { id: Date.now(), text: newTodo, done: false }]; setReminders(newReminders); saveData({newReminders}); setNewTodo(""); };
+            const toggleTodo = (id) => { const newReminders = reminders.map(r => r.id === id ? { ...r, done: !r.done } : r); setReminders(newReminders); saveData({newReminders}); };
+            const deleteTodo = (id) => { const newReminders = reminders.filter(r => r.id !== id); setReminders(newReminders); saveData({newReminders}); };
+            const sortedMemoKeys = Object.keys(entries).filter(k => entries[k].memo || entries[k].photo).sort((a, b) => new Date(b) - new Date(a));
+            return (
+                <div className="p-4 pb-24 space-y-6 animate-[fadeIn_0.3s]">
+                    <div className="bg-gradient-to-r from-pink-100 to-white p-6 rounded-[2rem] shadow-sm border border-pink-200 relative overflow-hidden" onClick={() => setQuote(MOTIVATIONS[Math.floor(Math.random()*MOTIVATIONS.length)])}>
+                        <div className="absolute top-0 right-0 text-6xl opacity-10">🐰</div><h3 className="text-xs font-bold text-pink-400 mb-1">✨ 今日鼓勵 (點我切換)</h3><p className="text-lg font-black text-[#8E5E6F]">{quote}</p>
+                    </div>
+                    <div className="bg-[#FFF9C4] rounded-[2rem] p-5 shadow-sm border border-[#FFF59D] relative">
+                        <div className="absolute -top-3 left-6 bg-[#F0F4C3] px-3 py-1 text-xs font-bold text-[#827717] rounded-full shadow-sm transform -rotate-2">📝 待辦清單</div>
+                        <div className="flex gap-2 mt-2 mb-4"><input type="text" value={newTodo} onChange={e=>setNewTodo(e.target.value)} placeholder="新增待辦..." className="flex-1 bg-white/50 border-none rounded-xl px-3 py-2 text-sm font-bold text-stone-600 focus:bg-white outline-none"/><button onClick={handleAddTodo} className="bg-[#FBC02D] text-white px-3 rounded-xl font-bold">+</button></div>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">{reminders && reminders.map(r => (<div key={r.id} className="flex items-center gap-2 bg-white/40 p-2 rounded-xl"><input type="checkbox" checked={r.done} onChange={()=>toggleTodo(r.id)} className="w-4 h-4 accent-[#FBC02D] rounded"/><span className={`flex-1 text-sm font-bold ${r.done ? 'text-stone-400 line-through' : 'text-stone-700'}`}>{r.text}</span><button onClick={()=>deleteTodo(r.id)} className="text-red-300 text-xs">✕</button></div>))}{(!reminders || reminders.length === 0) && <div className="text-xs text-stone-400 text-center">還沒有便利貼喔</div>}</div>
+                    </div>
+                    <div><h3 className="text-lg font-black text-[#8E5E6F] mb-3 pl-2">📔 筆記與照片牆</h3><div className="columns-2 gap-3 space-y-3">{sortedMemoKeys.map(k => { const e = entries[k]; const d = new Date(k); return (<div key={k} className="bg-white rounded-2xl p-3 shadow-sm border border-pink-50 break-inside-avoid"><div className="text-xs font-bold text-pink-300 mb-2">{d.getMonth()+1}/{d.getDate()}</div>{e.photo && <img src={e.photo} className="w-full rounded-xl mb-2 object-cover"/>}{e.memo && <p className="text-sm text-stone-600 font-bold whitespace-pre-wrap">{e.memo}</p>}</div>); })}</div></div>
+                </div>
+            );
+        };
+
+        const Summary = ({ entries, hideMoney, setHideMoney, hourlyRate, paidMonths, setPaidMonths, saveData }) => {
+            const monthlyTotals = useMemo(() => {
+                const totals = {};
+                Object.keys(entries).forEach(key => {
+                    const date = new Date(key);
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    const pay = (entries[key].calculatedPay || 0) - (Number(entries[key].loss) || 0);
+                    totals[monthKey] = (totals[monthKey] || 0) + pay;
+                });
+                return totals;
+            }, [entries]);
+
+            const unpaidTotal = Object.entries(monthlyTotals).reduce((acc, [mKey, amount]) => {
+                if (paidMonths.includes(mKey)) return acc;
+                return acc + amount;
+            }, 0);
+
+            const currentLoss = useMemo(() => {
+                return Object.keys(entries).reduce((acc, key) => {
+                    const date = new Date(key);
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    if (!paidMonths.includes(monthKey)) {
+                        return acc + (Number(entries[key].loss) || 0);
+                    }
+                    return acc;
+                }, 0);
+            }, [entries, paidMonths]);
+
+            const togglePaid = (monthKey) => {
+                const newPaid = paidMonths.includes(monthKey) ? paidMonths.filter(m => m !== monthKey) : [...paidMonths, monthKey];
+                setPaidMonths(newPaid);
+                saveData({newPaidMonths: newPaid});
+            };
+
+            return (
+                <div className="p-4 space-y-4 animate-[fadeIn_0.5s] pb-24">
+                    <div className="bg-gradient-to-br from-[#FAF5FF] to-white rounded-[2.5rem] p-6 shadow-sm border border-pink-100 relative overflow-hidden">
+                        <div className="absolute -top-4 -right-4 text-9xl opacity-10 rotate-12">💰</div>
+                        <h2 className="text-[#9D5E6F] text-sm font-bold mb-1">🌸 目前待領薪資 (未入帳)</h2>
+                        <div className="flex items-center gap-3">
+                            <div className="text-4xl font-black text-pink-500 tracking-tight">
+                                {hideMoney ? '****' : `$${unpaidTotal.toLocaleString()}`}
+                            </div>
+                            <button onClick={() => setHideMoney(!hideMoney)} className="text-2xl opacity-50 hover:opacity-100 transition-opacity">
+                                {hideMoney ? "🙈" : "👁️"}
+                            </button>
+                        </div>
+                        <div className="mt-4 flex gap-2"><span className="bg-white/60 px-3 py-1 rounded-xl text-xs font-bold text-pink-400">時薪 ${hourlyRate}</span><span className="bg-white/60 px-3 py-1 rounded-xl text-xs font-bold text-orange-400">賠償 ${currentLoss}</span></div>
+                    </div>
+                    
+                    <div className="bg-white rounded-[2rem] p-5 shadow-sm">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-[#8E5E6F] font-bold">💰 月份薪資結算</h3>
+                            <button onClick={() => setHideMoney(!hideMoney)} className="text-pink-300 hover:text-pink-500 transition-colors text-xl">
+                                {hideMoney ? "🙈" : "👁️"}
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            {Object.keys(monthlyTotals).sort().reverse().map(mKey => { 
+                                const isPaid = paidMonths.includes(mKey); 
+                                return (
+                                    <div key={mKey} className={`flex justify-between items-center p-3 rounded-xl border ${isPaid ? 'bg-stone-50 border-stone-100 opacity-60' : 'bg-pink-50 border-pink-100'}`}>
+                                        <div>
+                                            <div className="font-bold text-stone-600">{mKey}</div>
+                                            <div className="text-lg font-black text-pink-600">
+                                                {hideMoney ? '****' : `$${monthlyTotals[mKey].toLocaleString()}`}
+                                            </div>
+                                        </div>
+                                        <button onClick={() => togglePaid(mKey)} className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${isPaid ? 'bg-stone-200 text-stone-500' : 'bg-green-100 text-green-600 shadow-sm'}`}>
+                                            {isPaid ? '已入帳 ✅' : '領薪水 💵'}
+                                        </button>
+                                    </div>
+                                ); 
+                            })}
+                            {Object.keys(monthlyTotals).length === 0 && <div className="text-center text-stone-400 text-sm py-4">還沒有資料喔</div>}
+                        </div>
+                    </div>
+                    
+                    <ChartsView data={entries} />
+                </div>
+            );
+        };
+
+        const Calendar = ({ currentDate, setCurrentDate, entries, handleDateClick, hideMoney }) => {
+            const y = currentDate.getFullYear(); const m = currentDate.getMonth(); const daysInMonth = new Date(y, m+1, 0).getDate(); const firstDay = new Date(y, m, 1).getDay();
+            return (
+                <div className="pb-24">
+                    <div className="flex justify-between items-center px-6 py-4 sticky top-14 z-10 bg-[#FFF0F5]/95 backdrop-blur header-safe">
+                        <button onClick={() => setCurrentDate(new Date(y, m-1, 1))} className="text-pink-300 text-2xl">◀</button>
+                        <div className="text-center"><div className="text-xl font-black text-[#8E5E6F]">{y}</div><div className="text-sm font-bold text-pink-400">{m+1} 月</div></div>
+                        <button onClick={() => setCurrentDate(new Date(y, m+1, 1))} className="text-pink-300 text-2xl">▶</button>
+                    </div>
+                    <div className="grid grid-cols-7 text-center pb-2 text-[#F472B6] text-xs font-bold px-2"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div>
+                    <div className="grid grid-cols-7 px-2 auto-rows-fr">
+                        {Array(firstDay).fill(null).map((_,i) => <div key={`empty-${i}`} />)}
+                        {Array(daysInMonth).fill(null).map((_, i) => {
+                            const d = i + 1; const key = formatDateKey(new Date(y, m, d)); const entry = entries[key]; const isToday = new Date().toDateString() === new Date(y, m, d).toDateString();
+                            return (
+                                <div key={d} onClick={() => handleDateClick(d)} className={`min-h-[5.5rem] m-0.5 rounded-2xl relative border transition-all cursor-pointer ${isToday ? 'bg-white ring-2 ring-pink-200 border-transparent shadow-md' : 'bg-white border-pink-50'}`}>
+                                    <div className={`absolute top-1.5 left-2 text-sm font-black ${isToday ? 'text-pink-500' : 'text-[#CDB4DB]'}`}>{d}</div>
+                                    {entry?.photo && <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-pink-400"></div>}
+                                    <div className="absolute top-7 left-1 right-1 flex flex-col gap-1 px-0.5">
+                                        {entry?.planStart && !entry?.actStart && <div className="bg-stone-50 rounded-lg p-1 border border-dashed border-stone-200"><div className="text-[9px] font-bold text-stone-400 text-center">{entry.planStart}</div><div className="text-[9px] font-bold text-stone-400 text-center">- {entry.planEnd}</div></div>}
+                                        {entry?.actStart && <div className={`rounded-lg p-1 border shadow-sm ${entry.isHoliday ? 'bg-purple-100 border-purple-200' : 'bg-pink-50 border-pink-100'}`}><div className={`text-[10px] font-black text-center ${entry.isHoliday ? 'text-purple-600' : 'text-purple-500'}`}>{entry.actStart}</div><div className={`text-[10px] font-black text-center ${entry.isHoliday ? 'text-purple-600' : 'text-purple-500'}`}>{entry.actEnd}</div>{!hideMoney && entry.calculatedPay > 0 && <div className="text-[9px] text-center font-bold text-green-500/80 border-t border-black/5 mt-0.5 pt-0.5">${entry.calculatedPay - (entry.loss||0)}</div>}</div>}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        const Settings = ({ appTitle, setAppTitle, hourlyRate, setHourlyRate, user, saveData }) => (
+            <div className="p-6 space-y-6 animate-[fadeIn_0.3s]">
+                <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-pink-50 space-y-6">
+                    <h3 className="font-bold text-[#8E5E6F] text-lg">🎀 設定</h3>
+                    <div><label className="text-xs font-bold text-pink-300 pl-2">APP 標題</label><input type="text" value={appTitle} onBlur={e=>saveData({title: e.target.value})} onChange={e=>setAppTitle(e.target.value)} className="input-cute mt-2"/></div>
+                    <div><label className="text-xs font-bold text-pink-300 pl-2">基本時薪</label><input type="number" value={hourlyRate} onBlur={e=>saveData({rate: e.target.value})} onChange={e=>setHourlyRate(e.target.value)} className="input-cute mt-2"/></div>
+                    <div className="pt-4 text-center text-xs text-pink-300">帳號: {user?.email}</div>
+                    <button onClick={()=>window.fbSignOut(window.fbAuth)} className="w-full py-3 rounded-xl border-2 border-pink-100 text-pink-400 font-bold">登出</button>
+                </div>
+            </div>
+        );
+
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [isFirebaseReady, setIsFirebaseReady] = useState(false);
+            const [entries, setEntries] = useState({});
+            const [reminders, setReminders] = useState([]);
+            const [paidMonths, setPaidMonths] = useState([]);
+            const [appTitle, setAppTitle] = useState('🐰 米飛臨時記帳 🐰');
+            const [hourlyRate, setHourlyRate] = useState(190);
+            const [hideMoney, setHideMoney] = useState(false);
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [selectedDate, setSelectedDate] = useState(null);
+            const [view, setView] = useState('calendar');
+            const [modalTab, setModalTab] = useState('act');
+            const [formData, setFormData] = useState({ planStart: '', planEnd: '', planLocations: [], actStart: '', actEnd: '', actLocations: [], loss: '', isHoliday: false, memo: '', photo: '' });
+            const [toast, setToast] = useState(null);
+            const [cheer, setCheer] = useState(MOTIVATIONS[0]);
+            
+            const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: null });
+            const [showCopySelector, setShowCopySelector] = useState(false);
+            const [copyCandidates, setCopyCandidates] = useState([]);
+            const [selectedCopyDates, setSelectedCopyDates] = useState([]);
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    if (window.isFirebaseInitialized && window.fbOnAuth) {
+                        setIsFirebaseReady(true); clearInterval(interval); window.fbOnAuth(window.fbAuth, (u) => setUser(u));
+                    }
+                }, 100);
+                return () => clearInterval(interval);
+            }, []);
+
+            useEffect(() => {
+                if (!user) return;
+                const unsub = window.fbOnSnapshot(window.fbDoc(window.fbDb, "users", user.uid), (doc) => {
+                    if (doc.exists()) {
+                        const d = doc.data();
+                        setEntries(d.entries || {});
+                        setReminders(d.reminders || []);
+                        setPaidMonths(d.paidMonths || []);
+                        if(d.appTitle) setAppTitle(d.appTitle);
+                        if(d.hourlyRate) setHourlyRate(d.hourlyRate);
+                    }
+                });
+                return () => unsub();
+            }, [user]);
+
+            useEffect(() => { setCheer(MOTIVATIONS[Math.floor(Math.random()*MOTIVATIONS.length)]); }, [view]);
+
+            const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(null), 3000); };
+
+            const saveData = async ({ newEntries, title, rate, newReminders, newPaidMonths }) => {
+                if (!user) return;
+                const updateData = {};
+                if (newEntries !== undefined) updateData.entries = newEntries;
+                if (title !== undefined) updateData.appTitle = title;
+                if (rate !== undefined) updateData.hourlyRate = rate;
+                if (newReminders !== undefined) updateData.reminders = newReminders;
+                if (newPaidMonths !== undefined) updateData.paidMonths = newPaidMonths;
+                
+                try {
+                    await window.fbUpdateDoc(window.fbDoc(window.fbDb, "users", user.uid), updateData);
+                    if (newEntries || newPaidMonths || newReminders) showToast("✅ 存檔成功！");
+                } catch(e) {
+                     if (e.code === 'not-found') {
+                         await window.fbSetDoc(window.fbDoc(window.fbDb, "users", user.uid), updateData, { merge: true });
+                         if (newEntries || newPaidMonths || newReminders) showToast("✅ 存檔成功！");
+                     } else {
+                        showToast("❌ 存檔失敗：" + e.message);
+                        console.error(e);
+                     }
+                }
+            };
+
+            const handleDateClick = (day) => {
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                const key = formatDateKey(date);
+                const entry = entries[key] || {};
+                setSelectedDate(date);
+                setShowCopySelector(false);
+                const isHol = HOLIDAYS.includes(key);
+                setFormData({
+                    planStart: entry.planStart || '', planEnd: entry.planEnd || '', planLocations: entry.planLocations || [],
+                    actStart: entry.actStart || '', actEnd: entry.actEnd || '', actLocations: entry.actLocations || [],
+                    loss: entry.loss || '', isHoliday: entry.isHoliday !== undefined ? entry.isHoliday : isHol,
+                    memo: entry.memo || '', photo: entry.photo || ''
+                });
+                if (!entry.actStart && entry.planStart) setModalTab('act');
+                else if (!entry.actStart && !entry.planStart) setModalTab('plan');
+                else setModalTab('act');
+            };
+
+            const triggerDeleteEntry = () => {
+                setConfirmModal({
+                    isOpen: true,
+                    message: "確定要刪除這天的所有紀錄嗎？(無法復原喔)",
+                    onConfirm: () => handleDeleteEntry()
+                });
+            };
+
+            const handleDeleteEntry = async () => {
+                const key = formatDateKey(selectedDate);
+                const newEntries = { ...entries };
+                delete newEntries[key];
+                setEntries(newEntries);
+                setSelectedDate(null);
+                setConfirmModal({ isOpen: false });
+                await saveData({newEntries});
+            };
+
+            const prepareCopyCandidates = () => {
+                if (!formData.planStart || !formData.planEnd) return alert("請先填寫上班和下班時間喔 🐱");
+                const candidates = [];
+                const year = selectedDate.getFullYear();
+                const month = selectedDate.getMonth();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                for(let d = 1; d <= daysInMonth; d++) {
+                    const date = new Date(year, month, d);
+                    if (date > selectedDate) { candidates.push(date); }
+                }
+                setCopyCandidates(candidates);
+                setSelectedCopyDates([]);
+                setShowCopySelector(true);
+            };
+
+            const executeCopy = async () => {
+                if (selectedCopyDates.length === 0) return alert("請至少選擇一天喔！");
+                const newEntries = { ...entries };
+                const planDuration = calculateDuration(formData.planStart, formData.planEnd);
+                selectedCopyDates.forEach(key => {
+                    const existing = newEntries[key] || {};
+                    newEntries[key] = { 
+                        ...existing, 
+                        planStart: formData.planStart, 
+                        planEnd: formData.planEnd, 
+                        planHours: planDuration,
+                        planLocations: formData.planLocations 
+                    };
+                });
+                setEntries(newEntries);
+                await saveData({newEntries});
+                setShowCopySelector(false);
+                alert(`成功複製到 ${selectedCopyDates.length} 個日子！`);
+            };
+
+            const handleSaveEntry = async () => {
+                const key = formatDateKey(selectedDate);
+                const newEntries = { ...entries };
+                const actDuration = calculateDuration(formData.actStart, formData.actEnd);
+                const planDuration = calculateDuration(formData.planStart, formData.planEnd);
+                const { total: calculatedPay } = calculatePayDetail(actDuration, formData.isHoliday, hourlyRate);
+                const entryData = { ...formData, actHours: actDuration, planHours: planDuration, calculatedPay };
+
+                if (!formData.planStart && !formData.actStart && !formData.memo && !formData.photo) delete newEntries[key];
+                else newEntries[key] = entryData;
+
+                setEntries(newEntries);
+                setSelectedDate(null);
+                await saveData({newEntries});
+            };
+
+            const handlePhotoUpload = async (e) => {
+                const file = e.target.files[0];
+                if (file) { const base64 = await compressImage(file); setFormData(prev => ({ ...prev, photo: base64 })); }
+            };
+
+            const previewPay = useMemo(() => {
+                const dur = calculateDuration(formData.actStart, formData.actEnd);
+                const { total } = calculatePayDetail(dur, formData.isHoliday, hourlyRate);
+                return { total, hours: dur };
+            }, [formData.actStart, formData.actEnd, formData.isHoliday, hourlyRate]);
+
+            if (!isFirebaseReady) return <div className="h-screen flex items-center justify-center text-pink-300 font-bold">🐱 資料庫連線中...</div>;
+            if (!user) return <LoginView />;
+
+            const CustomModal = () => {
+                if (!confirmModal.isOpen) return null;
+                return (
+                    <div className="fixed inset-0 bg-black/50 z-[60] flex items-start justify-center p-4 modal-safe-top">
+                        <div className="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl transform scale-100 transition-all animate-[fadeIn_0.2s]">
+                            <div className="text-center mb-4"><div className="text-4xl mb-2">🐰</div><h3 className="text-lg font-black text-stone-700">{confirmModal.message}</h3></div>
+                            <div className="flex gap-3">
+                                <button onClick={() => setConfirmModal({isOpen:false})} className="flex-1 py-3 bg-stone-100 text-stone-500 rounded-xl font-bold">取消</button>
+                                <button onClick={confirmModal.onConfirm} className="flex-1 py-3 bg-red-400 text-white rounded-xl font-bold shadow-md shadow-red-100">確定</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen pb-safe-area overflow-x-hidden">
+                    {toast && <div className="toast">{toast}</div>}
+                    <CustomModal />
+                    <header className="bg-white/70 backdrop-blur-md px-6 shadow-sm flex flex-col items-center justify-center sticky top-0 z-20 rounded-b-[2rem] header-safe">
+                        <h1 className="text-lg font-black text-[#8E5E6F]">{appTitle}</h1>
+                        <div className="text-[10px] font-bold text-pink-400 mt-1 text-center animate-pulse">{cheer}</div>
+                    </header>
+
+                    <main className="max-w-md mx-auto min-h-[calc(100vh-140px)]">
+                        {view === 'calendar' && <Calendar currentDate={currentDate} setCurrentDate={setCurrentDate} entries={entries} handleDateClick={handleDateClick} hideMoney={hideMoney} />}
+                        {view === 'schedule' && <ScheduleView entries={entries} />}
+                        {view === 'memos' && <MemoView entries={entries} reminders={reminders} setReminders={setReminders} saveData={saveData} />}
+                        {view === 'stats' && <Summary entries={entries} hideMoney={hideMoney} setHideMoney={setHideMoney} hourlyRate={hourlyRate} paidMonths={paidMonths} setPaidMonths={setPaidMonths} saveData={saveData} />}
+                        {view === 'settings' && <Settings appTitle={appTitle} setAppTitle={setAppTitle} hourlyRate={hourlyRate} setHourlyRate={setHourlyRate} user={user} saveData={saveData} />}
+                    </main>
+
+                    <nav className="fixed bottom-0 w-full bg-white/80 backdrop-blur-xl border-t border-pink-50 flex justify-around py-3 pb-safe z-30 rounded-t-[2rem]">
+                        {[['calendar','📅','日記'], ['schedule','🕒','班表'], ['memos','📝','備忘'], ['stats','📊','統計'], ['settings','⚙️','設定']].map(([v,i,t]) => (
+                            <button key={v} onClick={()=>setView(v)} className={`flex flex-col items-center w-12 p-1 rounded-2xl transition-all ${view===v?'text-pink-500 bg-pink-50 scale-105':'text-pink-300'}`}>
+                                <span className="text-xl">{i}</span><span className="text-[9px] font-bold">{t}</span>
+                            </button>
+                        ))}
+                    </nav>
+
+                    {selectedDate && (
+                        <div className="fixed inset-0 bg-pink-900/20 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4">
+                            <div className="bg-white w-full max-w-sm rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl animate-[slideUp_0.4s] max-h-[90vh] overflow-y-auto">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="flex items-center gap-3"><h3 className="text-xl font-black text-[#8E5E6F]">{selectedDate.getMonth()+1}/{selectedDate.getDate()}</h3>{(entries[formatDateKey(selectedDate)]) && <button onClick={triggerDeleteEntry} className="bg-red-50 p-2 rounded-full text-red-400 hover:bg-red-100 transition-colors">🗑️</button>}</div>
+                                    <button onClick={()=>setSelectedDate(null)} className="bg-pink-50 p-2 rounded-full text-pink-400">✕</button>
+                                </div>
+                                <div className="flex bg-[#FFF5F7] rounded-xl p-1 mb-4">
+                                    <button onClick={()=>setModalTab('plan')} className={`flex-1 py-2 rounded-lg text-xs font-bold ${modalTab==='plan'?'bg-white text-pink-500 shadow-sm':'text-pink-300'}`}>🗓️ 預定班表</button>
+                                    <button onClick={()=>setModalTab('act')} className={`flex-1 py-2 rounded-lg text-xs font-bold ${modalTab==='act'?'bg-white text-pink-500 shadow-sm':'text-pink-300'}`}>✨ 實際打卡</button>
+                                </div>
+                                <div className="space-y-5">
+                                    {modalTab === 'plan' ? (
+                                        <div className="space-y-4 animate-[fadeIn_0.2s]">
+                                            <div><label className="text-xs font-bold text-pink-400 pl-2">班表時間</label><div className="flex items-center gap-2 mt-1"><input type="time" value={formData.planStart} onChange={e=>setFormData({...formData, planStart:e.target.value})} className="input-cute text-center"/><span className="text-pink-200">~</span><input type="time" value={formData.planEnd} onChange={e=>setFormData({...formData, planEnd:e.target.value})} className="input-cute text-center"/></div></div>
+                                            
+                                            {/* 地點選單 (Plan) */}
+                                            <div><label className="text-xs font-bold text-pink-300 pl-2">預計地點</label><div className="grid grid-cols-2 gap-2 mt-1">{LOCATIONS.map(l=><button key={l.id} onClick={()=>{const n=formData.planLocations.includes(l.id)?formData.planLocations.filter(i=>i!==l.id):[...formData.planLocations,l.id];setFormData({...formData,planLocations:n})}} className={`p-3 rounded-2xl border-2 font-bold text-sm flex gap-2 ${formData.planLocations.includes(l.id)?'bg-[#8E5E6F] text-white border-[#8E5E6F]':'bg-white text-stone-300'}`}>{l.icon} {l.name}</button>)}</div></div>
+
+                                            {/* 跨日警告 */}
+                                            {formData.planStart && formData.planEnd && isOvernight(formData.planStart, formData.planEnd) && (
+                                                <div className="bg-orange-50 text-orange-500 text-xs font-bold p-2 rounded-lg text-center border border-orange-200 mt-1">⚠️ 注意：結束時間早於開始時間 (跨日計算 +1)</div>
+                                            )}
+
+                                            {/* 班表超時提醒 */}
+                                            {calculateDuration(formData.planStart, formData.planEnd) > 8 && <div className="mt-2 p-2 bg-pink-100 rounded-xl border border-pink-200 flex items-center justify-center gap-2 animate-bounce"><span className="text-2xl">🍵</span><span className="text-xs font-black text-pink-500">🐰 班表超過8小時囉，記得休息！</span></div>}
+
+                                            {!showCopySelector ? (
+                                                <button onClick={prepareCopyCandidates} className="w-full text-xs bg-pink-50 text-pink-500 py-3 rounded-xl font-bold dashed border border-pink-200 hover:bg-pink-100">🔄 複製此班表到其他天</button>
+                                            ) : (
+                                                <div className="bg-pink-50 p-3 rounded-xl border border-pink-100">
+                                                    <div className="text-xs font-bold text-pink-400 mb-2">請勾選要複製的日期：</div>
+                                                    <div className="grid grid-cols-3 gap-2 mb-3 max-h-40 overflow-y-auto">{copyCandidates.map(d => { const k = formatDateKey(d); const isSel = selectedCopyDates.includes(k); return (<button key={k} onClick={() => setSelectedCopyDates(prev => isSel ? prev.filter(x=>x!==k) : [...prev, k])} className={`p-2 rounded-lg text-[10px] font-bold transition-all ${isSel ? 'bg-pink-500 text-white' : 'bg-white text-pink-300'}`}>{d.getMonth()+1}/{d.getDate()} ({WEEKDAYS[d.getDay()]})</button>) })}</div>
+                                                    <div className="flex gap-2"><button onClick={()=>setShowCopySelector(false)} className="flex-1 py-2 bg-white text-stone-400 rounded-lg text-xs font-bold">取消</button><button onClick={executeCopy} className="flex-1 py-2 bg-pink-500 text-white rounded-lg text-xs font-bold">確認複製 ✨</button></div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4 animate-[fadeIn_0.2s]">
+                                            {formData.planStart && <button onClick={()=>setFormData({...formData, actStart:formData.planStart, actEnd:formData.planEnd, actLocations:[...formData.planLocations]})} className="w-full text-xs bg-pink-50 text-pink-500 py-2 rounded-xl font-bold dashed border border-pink-200">⬇️ 帶入班表 ({formData.planStart}~{formData.planEnd})</button>}
+                                            <div>
+                                                <label className="text-xs font-bold text-pink-400 pl-2">實際工作時間</label>
+                                                <div className="flex items-center gap-2 mt-1"><input type="time" value={formData.actStart} onChange={e=>setFormData({...formData, actStart:e.target.value})} className="input-cute text-center bg-pink-50 text-pink-600"/><span className="text-pink-300">~</span><input type="time" value={formData.actEnd} onChange={e=>setFormData({...formData, actEnd:e.target.value})} className="input-cute text-center bg-pink-50 text-pink-600"/></div>
+                                                
+                                                {/* 跨日警告 */}
+                                                {formData.actStart && formData.actEnd && isOvernight(formData.actStart, formData.actEnd) && (
+                                                    <div className="bg-orange-50 text-orange-500 text-xs font-bold p-2 rounded-lg text-center border border-orange-200 mt-2">⚠️ 注意：結束時間早於開始時間 (跨日計算 +1)</div>
+                                                )}
+
+                                                {previewPay.hours > 0 && <div className="mt-2 text-center bg-green-50 rounded-xl p-2 border border-green-100"><div className="text-xs text-green-400 font-bold">工時 {previewPay.hours}h • 預估薪資</div><div className="text-xl font-black text-green-600">${previewPay.total}</div></div>}
+                                                
+                                                {/* 超時提醒 */}
+                                                {previewPay.hours > 8 && <div className="mt-2 p-2 bg-pink-100 rounded-xl border border-pink-200 flex items-center justify-center gap-2 animate-bounce"><span className="text-2xl">🍵</span><span className="text-xs font-black text-pink-500">🐰 辛苦了！超過8小時囉，記得休息！</span></div>}
+                                            </div>
+                                            
+                                            {/* 地點選單 (Act) */}
+                                            <div className="grid grid-cols-2 gap-2">{LOCATIONS.map(l=><button key={l.id} onClick={()=>{const n=formData.actLocations.includes(l.id)?formData.actLocations.filter(i=>i!==l.id):[...formData.actLocations,l.id];setFormData({...formData,actLocations:n})}} className={`p-3 rounded-2xl border-2 font-bold text-sm flex gap-2 ${formData.actLocations.includes(l.id)?'bg-pink-500 text-white border-pink-500':'bg-white text-stone-300'}`}>{l.icon} {l.name}</button>)}</div>
+
+                                            <div className="flex gap-3"><div className="flex-1"><label className="text-xs font-bold text-pink-300 pl-2">收銀賠償</label><input type="number" value={formData.loss} onChange={e=>setFormData({...formData, loss:e.target.value})} className="input-cute text-center text-orange-400" placeholder="$0"/></div><label className={`flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer mt-5 ${formData.isHoliday?'bg-purple-50 border-purple-200 text-purple-500':'bg-white border-stone-100 text-stone-300'}`}><input type="checkbox" className="hidden" checked={formData.isHoliday} onChange={e=>setFormData({...formData,isHoliday:e.target.checked})}/><span className="text-sm font-bold">🎉 國定假日</span></label></div>
+                                            
+                                            <div className="space-y-2 pt-2 border-t border-dashed border-pink-100"><textarea value={formData.memo} onChange={e=>setFormData({...formData, memo:e.target.value})} placeholder="寫點什麼..." rows="2" className="w-full bg-[#FFF5F7] rounded-xl p-3 text-sm font-bold text-purple-600 outline-none resize-none"></textarea><div className="flex items-center gap-2"><label className="flex-1 bg-white border border-pink-100 text-purple-300 text-xs font-bold py-3 rounded-xl text-center cursor-pointer hover:bg-purple-50">📷 上傳照片<input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload}/></label>{formData.photo && <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-pink-200"><img src={formData.photo} className="w-full h-full object-cover"/><button onClick={()=>setFormData({...formData, photo:''})} className="absolute inset-0 bg-black/30 text-white text-xs flex items-center justify-center">✕</button></div>}</div></div>
+                                        </div>
+                                    )}
+                                    {!showCopySelector && <button onClick={handleSaveEntry} className="w-full bg-gradient-to-r from-pink-400 to-rose-400 text-white font-black text-lg py-4 rounded-2xl shadow-lg active:scale-95 transition-transform">存檔 ✨</button>}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
