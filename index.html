@@ -26,7 +26,7 @@
         }
     </script>
     
-    <!-- 圖表 (使用穩定版) -->
+    <!-- 圖表 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     
@@ -43,7 +43,6 @@
             transition: background-color 0.3s ease;
         }
         
-        /* 夜間模式 Body 背景 */
         .dark body { background-color: #0f172a; }
 
         #root { 
@@ -68,27 +67,47 @@
         
         input, textarea, select { font-size: 16px !important; }
         
-        /* 亮色模式元件 */
         .input-cute { width: 100%; background: #FFF5F7; border-radius: 1rem; padding: 0.8rem; font-weight: bold; color: #8E5E6F; outline: none; border: 2px solid transparent; transition: all 0.2s; }
         .input-cute:focus { background: white; border-color: #FBCFE8; box-shadow: 0 0 0 2px #FCE7F3; }
         
-        /* 夜間模式元件：輸入框與焦點顏色加深 */
-        .dark .input-cute { background: #1e293b; color: #f472b6; border-color: #334155; }
+        .dark .input-cute { background: #1e293b; color: #c084fc; border-color: #334155; }
         .dark .input-cute:focus { background: #0f172a; border-color: #db2777; }
         
         .btn-cute { width: 100%; background: linear-gradient(to right, #F472B6, #FB7185); color: white; font-weight: 900; padding: 1rem; border-radius: 1rem; box-shadow: 0 4px 12px rgba(251, 113, 133, 0.3); transition: transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
         .btn-cute:active { transform: scale(0.98); }
         
-        .toast { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(131, 24, 67, 0.95); color: white; padding: 12px 24px; border-radius: 99px; font-size: 15px; font-weight: bold; z-index: 100; animation: fadeIn 0.3s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(131, 24, 67, 0.2); }
-        .dark .toast { background: rgba(244, 114, 182, 0.9); color: #1e293b; }
+        .toast { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(88, 28, 135, 0.95); color: white; padding: 12px 24px; border-radius: 99px; font-size: 15px; font-weight: bold; z-index: 100; animation: fadeIn 0.3s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(88, 28, 135, 0.2); }
+        .dark .toast { background: rgba(192, 132, 252, 0.9); color: #1e293b; }
     </style>
 </head>
 <body>
+    <!-- 啟動載入畫面：會一直顯示直到 Auth 確認完畢 -->
+    <div id="loading-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#FFF0F5;display:flex;justify-content:center;align-items:center;font-weight:bold;color:#F472B6;z-index:9999;transition:opacity 0.3s;flex-direction:column;">
+        <div style="font-size:3rem;margin-bottom:1rem;">🐰</div>
+        <div>資料庫連線中...</div>
+    </div>
+    
     <div id="root"></div>
 
+    <script>
+        window.onerror = function(msg, url, line) {
+            const loader = document.getElementById('loading-screen');
+            if(loader) {
+                loader.innerHTML = `
+                <div style="padding:20px;text-align:center;">
+                    <h3 style="color:#ef4444;">😢 發生錯誤</h3>
+                    <p style="font-size:12px;color:#666;margin:10px 0;">${msg}</p>
+                    <button onclick="window.location.reload()" style="margin-top:10px;padding:10px 20px;background:#F472B6;color:white;border:none;border-radius:10px;">重新整理</button>
+                </div>`;
+            }
+        };
+    </script>
+
+    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        // 加入 setPersistence, browserLocalPersistence
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // 米飛記帳專用 (miffymoneyv2)
@@ -109,6 +128,10 @@
             window.fbSignIn = signInWithEmailAndPassword;
             window.fbOnAuth = onAuthStateChanged;
             window.fbSignOut = signOut;
+            // 暴露 persistence 函式
+            window.fbSetPersistence = setPersistence;
+            window.fbBrowserLocalPersistence = browserLocalPersistence;
+            
             window.fbDoc = doc;
             window.fbSetDoc = setDoc;
             window.fbUpdateDoc = updateDoc;
@@ -184,12 +207,9 @@
         const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 bg-black/50 z-[60] flex items-start justify-center p-4">
-                    <div className="bg-white dark:bg-slate-800 w-full max-w-xs rounded-3xl p-6 shadow-2xl modal-safe-top transform scale-100 transition-all animate-[fadeIn_0.2s]">
-                        <div className="text-center mb-4">
-                            <div className="text-4xl mb-2">🐰</div>
-                            <h3 className="text-lg font-black text-stone-700 dark:text-stone-200">{message}</h3>
-                        </div>
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-start justify-center p-4 modal-safe-top">
+                    <div className="bg-white dark:bg-slate-800 w-full max-w-xs rounded-3xl p-6 shadow-2xl transform scale-100 transition-all animate-[fadeIn_0.2s]">
+                        <div className="text-center mb-4"><div className="text-4xl mb-2">🐰</div><h3 className="text-lg font-black text-stone-700 dark:text-stone-200">{message}</h3></div>
                         <div className="flex gap-3">
                             <button onClick={onCancel} className="flex-1 py-3 bg-stone-100 dark:bg-slate-700 text-stone-500 dark:text-stone-300 rounded-xl font-bold">取消</button>
                             <button onClick={onConfirm} className="flex-1 py-3 bg-red-400 text-white rounded-xl font-bold shadow-md shadow-red-100">確定</button>
@@ -200,7 +220,7 @@
         };
 
         // --- Components ---
-        const LoginView = ({ forceReload }) => {
+        const LoginView = () => {
             const [isRegister, setIsRegister] = useState(false);
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
@@ -211,6 +231,9 @@
                 if(!window.fbAuth) return alert("系統連線中...");
                 setError(''); setLoading(true);
                 try {
+                    // Explicitly set persistence before sign in/up
+                    await window.fbSetPersistence(window.fbAuth, window.fbBrowserLocalPersistence);
+
                     if (isRegister) await window.fbCreateUser(window.fbAuth, email, password);
                     else await window.fbSignIn(window.fbAuth, email, password);
                 } catch (e) {
@@ -236,8 +259,10 @@
                             <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="input-cute" placeholder="密碼" />
                             {error && <div className="text-red-400 text-xs font-bold text-center bg-red-50 p-2 rounded-xl">{error}</div>}
                             <button onClick={handleSubmit} disabled={loading} className="btn-cute">{loading ? '...' : (isRegister ? '註冊' : '登入')}</button>
+                            
+                            {/* 文字邏輯修正 */}
                             <button onClick={()=>setIsRegister(!isRegister)} className="w-full text-center text-xs font-bold text-pink-400">
-                                {isRegister ? '已有帳號？登入' : '還沒有帳號？註冊一個'}
+                                {isRegister ? '已有帳號？登入' : '沒有帳號？註冊'}
                             </button>
                         </div>
                     </div>
@@ -275,10 +300,7 @@
                                 datasets: [{ label: '收入', data: Object.values(monthMap), borderColor: '#F472B6', backgroundColor: '#FFF0F5', tension: 0.3, pointBackgroundColor: '#DB2777', pointRadius: 5 }]
                             },
                             options: { 
-                                plugins: { 
-                                    legend: {display:false},
-                                    datalabels: { align: 'top', anchor: 'end', color: '#DB2777', font: { weight: 'bold' }, formatter: (value) => value > 0 ? '$'+value : '' }
-                                }, 
+                                plugins: { legend: {display:false}, datalabels: { align: 'top', anchor: 'end', color: '#DB2777', font: { weight: 'bold' }, formatter: (value) => value > 0 ? '$'+value : '' } }, 
                                 scales: { y: {display:false, beginAtZero:true}, x: {grid: {display:false}} } 
                             }
                         });
@@ -325,7 +347,6 @@
                                             <div className="flex gap-1">{entry.planLocations?.map(l=><span key={l}>{LOCATIONS.find(x=>x.id===l)?.icon}</span>)}</div>
                                         </div>
                                     </div>
-                                    {/* 班表超時提醒 */}
                                     {entry.planHours > 8 && <div className="mt-2 text-xs font-bold text-pink-400 flex items-center gap-1">🐰 辛苦了！超過8小時囉，記得休息！🍵</div>}
                                 </div>
                             );
@@ -408,9 +429,9 @@
                         <div className="mt-4 flex gap-2"><span className="bg-white/60 dark:bg-slate-700/60 px-3 py-1 rounded-xl text-xs font-bold text-pink-400">時薪 ${hourlyRate}</span><span className="bg-white/60 dark:bg-slate-700/60 px-3 py-1 rounded-xl text-xs font-bold text-orange-400">賠償 ${currentLoss}</span></div>
                     </div>
                     
-                    <div className="bg-white rounded-[2rem] p-5 shadow-sm">
+                    <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-5 shadow-sm">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-[#8E5E6F] font-bold">💰 月份薪資結算</h3>
+                            <h3 className="text-[#8E5E6F] dark:text-pink-500 font-bold">💰 月份薪資結算</h3>
                             <button onClick={() => setHideMoney(!hideMoney)} className="text-pink-300 hover:text-pink-500 transition-colors text-xl">
                                 {hideMoney ? "🙈" : "👁️"}
                             </button>
@@ -491,15 +512,19 @@
                          </div>
                     </div>
                     
-                    <div className="pt-4 text-center text-xs text-pink-300">帳號: {user?.email}</div>
-                    <button onClick={()=>window.fbSignOut(window.fbAuth)} className="w-full py-3 rounded-xl border-2 border-pink-100 text-pink-400 font-bold">登出</button>
+                    <div className="pt-4 flex flex-col gap-3">
+                        <div className="text-center text-xs text-pink-300">帳號: {user?.email}</div>
+                        <button onClick={() => window.location.reload()} className="w-full py-3 rounded-xl bg-stone-100 dark:bg-slate-700 text-stone-500 dark:text-stone-300 font-bold flex items-center justify-center gap-2">🔄 重新整理 (更新 App)</button>
+                        <button onClick={()=>window.fbSignOut(window.fbAuth)} className="w-full py-3 rounded-xl border-2 border-pink-100 text-pink-400 font-bold">登出</button>
+                    </div>
                 </div>
             </div>
         );
 
         const App = () => {
             const [user, setUser] = useState(null);
-            const [isFirebaseReady, setIsFirebaseReady] = useState(false);
+            // Fix: wait for user auth state
+            const [isAuthChecking, setIsAuthChecking] = useState(true);
             const [entries, setEntries] = useState({});
             const [reminders, setReminders] = useState([]);
             const [paidMonths, setPaidMonths] = useState([]);
@@ -523,12 +548,20 @@
             useEffect(() => { if (isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
 
             useEffect(() => {
-                const interval = setInterval(() => {
+                const checkFirebase = setInterval(() => {
                     if (window.isFirebaseInitialized && window.fbOnAuth) {
-                        setIsFirebaseReady(true); clearInterval(interval); window.fbOnAuth(window.fbAuth, (u) => setUser(u));
+                        clearInterval(checkFirebase);
+                        
+                        window.fbOnAuth(window.fbAuth, (u) => {
+                            setUser(u);
+                            setIsAuthChecking(false);
+                            
+                            const loader = document.getElementById('loading-screen');
+                            if (loader) loader.style.display = 'none';
+                        });
                     }
-                }, 100);
-                return () => clearInterval(interval);
+                }, 50);
+                return () => clearInterval(checkFirebase);
             }, []);
 
             useEffect(() => {
@@ -685,7 +718,7 @@
                 return { total, hours: dur };
             }, [formData.actStart, formData.actEnd, formData.isHoliday, hourlyRate2025, hourlyRate2026, selectedDate]);
 
-            if (!isFirebaseReady) return <div className="h-screen flex items-center justify-center text-pink-300 font-bold bg-[#FFF0F5]">🐰 資料庫連線中...</div>;
+            if (isAuthChecking) return null; // Let HTML loader show
             if (!user) return <LoginView />;
 
             const CustomModal = () => {
