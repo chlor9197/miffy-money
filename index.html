@@ -78,7 +78,7 @@
         .btn-cute { width: 100%; background: linear-gradient(to right, #F472B6, #FB7185); color: white; font-weight: 900; padding: 1rem; border-radius: 1rem; box-shadow: 0 4px 12px rgba(251, 113, 133, 0.3); transition: transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
         .btn-cute:active { transform: scale(0.98); }
         
-        .toast { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(131, 24, 67, 0.95); color: white; padding: 12px 24px; border-radius: 99px; font-size: 15px; font-weight: bold; z-index: 100; animation: fadeIn 0.3s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(131, 24, 67, 0.2); }
+        .toast { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(157, 23, 77, 0.95); color: white; padding: 12px 24px; border-radius: 99px; font-size: 15px; font-weight: bold; z-index: 100; animation: fadeIn 0.3s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(157, 23, 77, 0.2); }
         .dark .toast { background: rgba(244, 114, 182, 0.9); color: #1e293b; }
     </style>
 </head>
@@ -148,12 +148,14 @@
         const { useState, useEffect, useRef, useMemo } = React;
 
         const ADMIN_EMAIL = "xna258@gmail.com";
+        const MANAGER_NAME = "孫千涵"; // 店長名字
 
         const LOCATIONS = [
             { id: 'moomin', name: '姆明', icon: '🦛', color: 'bg-[#E0F2FE] text-[#0369A1] border-[#BAE6FD] dark:bg-sky-900 dark:text-sky-200 dark:border-sky-700' },
             { id: 'miffy', name: '米飛', icon: '🐰', color: 'bg-[#FFF7ED] text-[#EA580C] border-[#FFEDD5] dark:bg-orange-900 dark:text-orange-200 dark:border-orange-700' },
             { id: 'lightmeal', name: '輕食', icon: '🥗', color: 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0] dark:bg-green-900 dark:text-green-200 dark:border-green-700' },
-            { id: 'patch', name: '燙布貼', icon: '🧵', color: 'bg-[#FAF5FF] text-[#7E22CE] border-[#E9D5FF] dark:bg-purple-900 dark:text-purple-200 dark:border-purple-700' }
+            { id: 'patch', name: '燙布貼', icon: '🧵', color: 'bg-[#FAF5FF] text-[#7E22CE] border-[#E9D5FF] dark:bg-purple-900 dark:text-purple-200 dark:border-purple-700' },
+            { id: 'bb', name: 'BB', icon: '🧸', color: 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-200 dark:border-indigo-700' }
         ];
         const HOLIDAYS = ['2025-12-25', '2026-01-01', '2026-02-17', '2026-02-18', '2026-02-19', '2026-02-20', '2026-02-28', '2026-04-04', '2026-04-05', '2026-05-01', '2026-06-19', '2026-09-25', '2026-10-10'];
         const MOTIVATIONS = ["今天也是閃閃發光的一天！✨", "妳的努力就像魔法一樣強大 💖", "錢錢正在排隊進妳的錢包～💰", "加油加油！喝杯奶茶獎勵自己 🧋", "把班表填滿滿，買喜歡的東西！🎁", "累了就休息一下，兔子陪妳 🐰", "每一個小時都是妳的寶藏 💎"];
@@ -225,7 +227,7 @@
         };
 
         // --- Components ---
-        const LoginView = () => {
+        const LoginView = ({ forceReload }) => {
             const [isRegister, setIsRegister] = useState(false);
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
@@ -256,7 +258,7 @@
             return (
                 <div className="min-h-screen flex items-center justify-center p-6">
                     <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2.5rem] p-8 shadow-xl border border-pink-100 dark:border-slate-700 animate-[fadeIn_0.5s]">
-                        <div className="text-center mb-6"><div className="text-6xl mb-4">🐰</div><h1 className="text-2xl font-black text-[#8E5E6F] dark:text-pink-300">米飛臨時記帳</h1><p className="text-pink-300 dark:text-pink-600 text-sm font-bold mt-2">存下每一份努力 💖</p></div>
+                        <div className="text-center mb-6"><div className="text-6xl mb-4">🐰</div><h1 className="text-2xl font-black text-[#9D174D] dark:text-pink-300">米飛臨時記帳</h1><p className="text-pink-400 dark:text-pink-600 text-sm font-bold mt-2">存下每一份努力 💖</p></div>
                         <div className="space-y-4">
                             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} className="input-cute" placeholder="Email" />
                             <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="input-cute" placeholder="密碼" />
@@ -310,7 +312,7 @@
                         if (bChart.current) bChart.current.destroy();
                         bChart.current = new Chart(barRef.current, { 
                             type: 'doughnut', 
-                            data: { labels: Object.keys(locMap), datasets: [{ data: Object.values(locMap), backgroundColor: ['#60A5FA', '#FB923C', '#4ADE80', '#C084FC'], borderWidth: 2, borderColor: '#ffffff' }] }, 
+                            data: { labels: Object.keys(locMap), datasets: [{ data: Object.values(locMap), backgroundColor: ['#60A5FA', '#FB923C', '#4ADE80', '#C084FC', '#818CF8'], borderWidth: 2, borderColor: '#ffffff' }] }, 
                             options: { plugins: { legend: {position:'right'}, datalabels: { display: false } }, cutout: '60%' } 
                         });
                     }
@@ -320,8 +322,8 @@
 
             return ( 
                 <div className="space-y-4 pb-24"> 
-                    <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-5 shadow-sm"><h3 className="text-[#8E5E6F] dark:text-pink-500 font-bold mb-4">📈 收入曲線 (含金額)</h3><canvas ref={lineRef} height="200"></canvas></div>
-                    <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-5 shadow-sm"><h3 className="text-[#8E5E6F] dark:text-pink-500 font-bold mb-4">📍 地點統計</h3><canvas ref={barRef} height="200"></canvas></div>
+                    <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-5 shadow-sm"><h3 className="text-[#9D174D] dark:text-pink-500 font-bold mb-4">📈 收入曲線 (含金額)</h3><canvas ref={lineRef} height="200"></canvas></div>
+                    <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-5 shadow-sm"><h3 className="text-[#9D174D] dark:text-pink-500 font-bold mb-4">📍 地點統計</h3><canvas ref={barRef} height="200"></canvas></div>
                 </div> 
             );
         };
@@ -330,7 +332,7 @@
             const sortedKeys = Object.keys(entries).filter(k => entries[k].planStart).sort((a, b) => new Date(b) - new Date(a));
             return (
                 <div className="p-4 pb-24 animate-[fadeIn_0.3s]">
-                    <h2 className="text-xl font-black text-[#8E5E6F] dark:text-pink-500 mb-4 pl-2">🗓️ 我的班表</h2>
+                    <h2 className="text-xl font-black text-[#9D174D] dark:text-pink-500 mb-4 pl-2">🗓️ 我的班表</h2>
                     <div className="space-y-3">
                         {sortedKeys.length === 0 ? <div className="text-center text-pink-300 py-10 bg-white dark:bg-slate-800 rounded-[2rem]">還沒有安排班表喔 🐰</div> : sortedKeys.map(key => {
                             const entry = entries[key]; const date = new Date(key); const isFuture = new Date(key) >= new Date().setHours(0,0,0,0);
@@ -373,7 +375,22 @@
 
             const getFormattedDate = (d) => formatDateKey(d);
 
-            // Find my schedule across ALL zones for the selected date - 智慧定位
+            // 尋找店長班表
+            const managerSchedule = useMemo(() => {
+                const dateKey = getFormattedDate(selectedDate);
+                if (!zoneSchedules?.[dateKey]) return null;
+                
+                for (const loc of LOCATIONS) {
+                    const list = zoneSchedules[dateKey][loc.id];
+                    if (list) {
+                        const found = list.find(s => s.name === MANAGER_NAME);
+                        if (found) return { ...found, locationName: loc.name, locationIcon: loc.icon };
+                    }
+                }
+                return null;
+            }, [zoneSchedules, selectedDate]);
+
+            // 尋找我的班表 (智慧定位)
             const myGlobalSchedule = useMemo(() => {
                 const dateKey = getFormattedDate(selectedDate);
                 if (!zoneSchedules?.[dateKey]) return null;
@@ -435,7 +452,6 @@
                 let updatedSchedules = JSON.parse(JSON.stringify(zoneSchedules || {}));
                 const targetKey = targetDateInput; 
 
-                // If Editing, delete the old one first
                 if (modalMode === 'edit') {
                      const oldDateKey = editingOriginalDateKey;
                      if (updatedSchedules[oldDateKey] && updatedSchedules[oldDateKey][selectedZone]) {
@@ -443,7 +459,6 @@
                      }
                 }
 
-                // Add New/Updated Schedule
                 if (!updatedSchedules[targetKey]) updatedSchedules[targetKey] = {};
                 if (!updatedSchedules[targetKey][selectedZone]) updatedSchedules[targetKey][selectedZone] = [];
                 
@@ -497,11 +512,24 @@
             return (
                 <div className="p-4 pb-24 animate-[fadeIn_0.3s]">
                     <div className="flex justify-between items-end mb-4 px-1">
-                        <h2 className="text-xl font-black text-[#8E5E6F] dark:text-pink-400">👥 夥伴班表</h2>
+                        <h2 className="text-xl font-black text-[#9D174D] dark:text-pink-400">👥 夥伴班表</h2>
                         <input type="date" value={getFormattedDate(selectedDate)} onChange={(e) => setSelectedDate(new Date(e.target.value))} className="bg-white dark:bg-slate-700 border border-pink-200 dark:border-slate-600 rounded-xl px-3 py-1 text-sm font-bold text-stone-600 dark:text-stone-300 outline-none" />
                     </div>
                     <div className="flex gap-2 overflow-x-auto pb-2 mb-4 no-scrollbar">{LOCATIONS.map(l => (<button key={l.id} onClick={() => setSelectedZone(l.id)} className={`flex-shrink-0 px-4 py-2 rounded-xl border-2 transition-all flex items-center gap-2 ${selectedZone === l.id ? 'bg-white border-pink-400 text-pink-600 shadow-sm dark:bg-slate-800 dark:border-pink-400' : 'bg-white/50 border-transparent text-stone-400 dark:bg-slate-800/50'}`}><span>{l.icon}</span><span className="font-bold text-sm">{l.name}</span></button>))}</div>
                     
+                    {/* Manager Status Card */}
+                     <div className="bg-gradient-to-r from-yellow-100 to-white dark:from-yellow-900/30 dark:to-slate-800 p-4 rounded-2xl shadow-sm border border-yellow-200 dark:border-yellow-700 mb-4">
+                        <div className="text-xs font-bold text-yellow-500 mb-1">👑 店長班表 ({getFormattedDate(selectedDate)})</div>
+                        {managerSchedule ? (
+                            <div className="text-lg font-black text-yellow-600 dark:text-yellow-300 flex items-center gap-2">
+                                <span>{managerSchedule.locationIcon} {managerSchedule.locationName}</span>
+                                <span className="bg-yellow-200 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-100 px-2 py-0.5 rounded-lg text-sm">{managerSchedule.start}-{managerSchedule.end}</span>
+                            </div>
+                        ) : (
+                            <div className="text-sm font-bold text-stone-400 dark:text-stone-500">店長今天好像休假 🌴</div>
+                        )}
+                    </div>
+
                     {/* My Status (Global) - 智慧定位 */}
                     <div className="bg-gradient-to-r from-pink-100 to-white dark:from-slate-700 dark:to-slate-800 p-4 rounded-2xl shadow-sm border border-pink-200 dark:border-slate-600 mb-6">
                         <div className="text-xs font-bold text-pink-400 mb-1">今天 ({getFormattedDate(selectedDate)}) 我在...</div>
@@ -571,14 +599,14 @@
             return (
                 <div className="p-4 pb-24 space-y-6 animate-[fadeIn_0.3s]">
                     <div className="bg-gradient-to-r from-pink-100 to-white dark:from-slate-800 dark:to-slate-700 p-6 rounded-[2rem] shadow-sm border border-pink-200 dark:border-slate-600 relative overflow-hidden" onClick={() => setQuote(MOTIVATIONS[Math.floor(Math.random()*MOTIVATIONS.length)])}>
-                        <div className="absolute top-0 right-0 text-6xl opacity-10">🐰</div><h3 className="text-xs font-bold text-pink-400 mb-1">✨ 今日鼓勵 (點我切換)</h3><p className="text-lg font-black text-[#8E5E6F] dark:text-pink-200">{quote}</p>
+                        <div className="absolute top-0 right-0 text-6xl opacity-10">🐰</div><h3 className="text-xs font-bold text-pink-400 mb-1">✨ 今日鼓勵 (點我切換)</h3><p className="text-lg font-black text-[#9D174D] dark:text-pink-200">{quote}</p>
                     </div>
                     <div className="bg-[#FFF9C4] dark:bg-yellow-900/30 rounded-[2rem] p-5 shadow-sm border border-[#FFF59D] dark:border-yellow-800 relative">
                         <div className="absolute -top-3 left-6 bg-[#F0F4C3] dark:bg-yellow-800 px-3 py-1 text-xs font-bold text-[#827717] dark:text-yellow-100 rounded-full shadow-sm transform -rotate-2">📝 待辦清單</div>
                         <div className="flex gap-2 mt-2 mb-4"><input type="text" value={newTodo} onChange={e=>setNewTodo(e.target.value)} placeholder="新增待辦..." className="flex-1 bg-white/50 dark:bg-slate-800 border-none rounded-xl px-3 py-2 text-sm font-bold text-stone-600 dark:text-stone-200 focus:bg-white dark:focus:bg-slate-700 outline-none"/><button onClick={handleAddTodo} className="bg-[#FBC02D] text-white px-3 rounded-xl font-bold">+</button></div>
                         <div className="space-y-2 max-h-96 overflow-y-auto">{reminders && reminders.map(r => (<div key={r.id} className="flex items-center gap-2 bg-white/40 dark:bg-slate-800/50 p-2 rounded-xl"><input type="checkbox" checked={r.done} onChange={()=>toggleTodo(r.id)} className="w-4 h-4 accent-[#FBC02D] rounded"/><span className={`flex-1 text-sm font-bold ${r.done ? 'text-stone-400 line-through' : 'text-stone-700 dark:text-stone-200'}`}>{r.text}</span><button onClick={()=>deleteTodo(r.id)} className="text-red-300 text-xs">✕</button></div>))}{(!reminders || reminders.length === 0) && <div className="text-xs text-stone-400 text-center">還沒有便利貼喔</div>}</div>
                     </div>
-                    <div><h3 className="text-lg font-black text-[#8E5E6F] dark:text-pink-500 mb-3 pl-2">📔 筆記與照片牆</h3><div className="columns-2 gap-3 space-y-3">{sortedMemoKeys.map(k => { 
+                    <div><h3 className="text-lg font-black text-[#9D174D] dark:text-pink-500 mb-3 pl-2">📔 筆記與照片牆</h3><div className="columns-2 gap-3 space-y-3">{sortedMemoKeys.map(k => { 
                         const e = entries[k]; const d = new Date(k); 
                         const photos = e.photos || (e.photo ? [e.photo] : []);
                         return (<div key={k} className="bg-white dark:bg-slate-800 rounded-2xl p-3 shadow-sm border border-pink-50 dark:border-slate-700 break-inside-avoid"><div className="text-xs font-bold text-pink-300 mb-2">{d.getMonth()+1}/{d.getDate()}</div>
@@ -624,7 +652,7 @@
 
             return (
                 <div className="p-4 space-y-4 animate-[fadeIn_0.5s] pb-24">
-                    <div className="bg-gradient-to-br from-[#FAF5FF] to-white dark:from-slate-800 dark:to-slate-900 rounded-[2.5rem] p-6 shadow-sm border border-pink-100 dark:border-slate-700 relative overflow-hidden">
+                    <div className="bg-gradient-to-br from-[#FFF0F5] to-white dark:from-slate-800 dark:to-slate-900 rounded-[2.5rem] p-6 shadow-sm border border-pink-100 dark:border-slate-700 relative overflow-hidden">
                         <div className="absolute -top-4 -right-4 text-9xl opacity-10 rotate-12">💰</div>
                         <h2 className="text-[#9D5E6F] dark:text-pink-500 text-sm font-bold mb-1">🌸 目前待領薪資 (未入帳)</h2>
                         <div className="flex items-center gap-3">
@@ -640,7 +668,7 @@
                     
                     <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-5 shadow-sm">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-[#8E5E6F] dark:text-pink-500 font-bold">💰 月份薪資結算</h3>
+                            <h3 className="text-[#9D174D] dark:text-pink-500 font-bold">💰 月份薪資結算</h3>
                             <button onClick={() => setHideMoney(!hideMoney)} className="text-pink-300 hover:text-pink-500 transition-colors text-xl">
                                 {hideMoney ? "🙈" : "👁️"}
                             </button>
@@ -659,7 +687,7 @@
                 <div className="pb-24">
                     <div className="flex justify-between items-center px-6 py-4 sticky top-14 z-10 bg-[#FFF0F5]/95 dark:bg-slate-900/95 backdrop-blur header-safe w-full max-w-[500px] mx-auto">
                         <button onClick={() => setCurrentDate(new Date(y, m-1, 1))} className="text-pink-300 text-2xl">◀</button>
-                        <div className="text-center"><div className="text-xl font-black text-[#8E5E6F] dark:text-pink-500">{y}</div><div className="text-sm font-bold text-pink-400">{m+1} 月</div></div>
+                        <div className="text-center"><div className="text-xl font-black text-[#9D174D] dark:text-pink-500">{y}</div><div className="text-sm font-bold text-pink-400">{m+1} 月</div></div>
                         <button onClick={() => setCurrentDate(new Date(y, m+1, 1))} className="text-pink-300 text-2xl">▶</button>
                     </div>
                     <div className="grid grid-cols-7 text-center pb-2 text-[#F472B6] text-xs font-bold px-2"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div>
@@ -687,7 +715,7 @@
             <div className="p-6 space-y-6 animate-[fadeIn_0.3s]">
                 <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-6 shadow-sm border border-pink-50 dark:border-slate-700 space-y-6">
                     <div className="flex justify-between items-center">
-                        <h3 className="font-bold text-[#8E5E6F] dark:text-pink-500 text-lg">🎀 設定</h3>
+                        <h3 className="font-bold text-[#9D174D] dark:text-pink-500 text-lg">🎀 設定</h3>
                         <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-2xl p-2 bg-stone-100 dark:bg-slate-700 rounded-full">{isDarkMode ? '🌙' : '☀️'}</button>
                     </div>
                     <div><label className="text-xs font-bold text-pink-300 pl-2">APP 標題</label><input type="text" value={appTitle} onBlur={e=>saveData({title: e.target.value})} onChange={e=>setAppTitle(e.target.value)} className="input-cute mt-2"/></div>
@@ -734,7 +762,6 @@
 
         const App = () => {
             const [user, setUser] = useState(null);
-            // Fix: wait for user auth state
             const [isAuthChecking, setIsAuthChecking] = useState(true);
             const [entries, setEntries] = useState({});
             const [reminders, setReminders] = useState([]);
@@ -991,7 +1018,7 @@
                     {toast && <div className="toast">{toast}</div>}
                     <CustomModal />
                     <header className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 shadow-sm flex flex-col items-center justify-center sticky top-0 z-20 rounded-b-[2rem] header-safe w-full max-w-[500px] mx-auto">
-                        <h1 className="text-lg font-black text-[#8E5E6F] dark:text-pink-300">{appTitle}</h1>
+                        <h1 className="text-lg font-black text-[#9D174D] dark:text-pink-300">{appTitle}</h1>
                         <div className="text-[10px] font-bold text-pink-400 mt-1 text-center animate-pulse">{cheer}</div>
                     </header>
 
@@ -1016,7 +1043,7 @@
                         <div className="fixed inset-0 bg-pink-900/20 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4">
                             <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl animate-[slideUp_0.4s] max-h-[90vh] overflow-y-auto">
                                 <div className="flex justify-between items-center mb-4">
-                                    <div className="flex items-center gap-3"><h3 className="text-xl font-black text-[#8E5E6F] dark:text-pink-300">{selectedDate.getMonth()+1}/{selectedDate.getDate()}</h3>{(entries[formatDateKey(selectedDate)]) && <button onClick={triggerDeleteEntry} className="bg-red-50 p-2 rounded-full text-red-400 hover:bg-red-100 transition-colors">🗑️</button>}</div>
+                                    <div className="flex items-center gap-3"><h3 className="text-xl font-black text-[#9D174D] dark:text-pink-300">{selectedDate.getMonth()+1}/{selectedDate.getDate()}</h3>{(entries[formatDateKey(selectedDate)]) && <button onClick={triggerDeleteEntry} className="bg-red-50 p-2 rounded-full text-red-400 hover:bg-red-100 transition-colors">🗑️</button>}</div>
                                     <button onClick={()=>setSelectedDate(null)} className="bg-pink-50 p-2 rounded-full text-pink-400">✕</button>
                                 </div>
                                 <div className="flex bg-[#FFF5F7] dark:bg-slate-700 rounded-xl p-1 mb-4">
@@ -1033,7 +1060,7 @@
                                                 <div className="text-[10px] text-orange-400 font-bold bg-orange-50 px-2 py-1 rounded-lg mt-1 text-center">⚠️ 結束時間早於開始 (跨日 +1)</div>
                                             )}
 
-                                            <div><label className="text-xs font-bold text-pink-300 pl-2">預計地點</label><div className="grid grid-cols-2 gap-2 mt-1">{LOCATIONS.map(l=><button key={l.id} onClick={()=>{const n=formData.planLocations.includes(l.id)?formData.planLocations.filter(i=>i!==l.id):[...formData.planLocations,l.id];setFormData({...formData,planLocations:n})}} className={`p-3 rounded-2xl border-2 font-bold text-sm flex gap-2 ${formData.planLocations.includes(l.id)?'bg-[#8E5E6F] text-white border-[#8E5E6F]':'bg-white dark:bg-slate-700 text-stone-300'}`}>{l.icon} {l.name}</button>)}</div></div>
+                                            <div><label className="text-xs font-bold text-pink-300 pl-2">預計地點</label><div className="grid grid-cols-2 gap-2 mt-1">{LOCATIONS.map(l=><button key={l.id} onClick={()=>{const n=formData.planLocations.includes(l.id)?formData.planLocations.filter(i=>i!==l.id):[...formData.planLocations,l.id];setFormData({...formData,planLocations:n})}} className={`p-3 rounded-2xl border-2 font-bold text-sm flex gap-2 ${formData.planLocations.includes(l.id)?'bg-[#9D174D] text-white border-[#9D174D]':'bg-white dark:bg-slate-700 text-stone-300'}`}>{l.icon} {l.name}</button>)}</div></div>
 
                                             {!showCopySelector ? (
                                                 <button onClick={prepareCopyCandidates} className="w-full text-xs bg-pink-50 text-pink-500 py-3 rounded-xl font-bold dashed border border-purple-200 hover:bg-pink-100">🔄 複製此班表到其他天</button>
@@ -1047,7 +1074,7 @@
                                         </div>
                                     ) : (
                                         <div className="space-y-4 animate-[fadeIn_0.2s]">
-                                            {formData.planStart && <button onClick={()=>setFormData({...formData, actStart:formData.planStart, actEnd:formData.planEnd, actLocations:[...formData.planLocations]})} className="w-full text-xs bg-pink-50 text-pink-500 py-2 rounded-xl font-bold dashed border border-pink-200">⬇️ 帶入班表 ({formData.planStart}~{formData.planEnd})</button>}
+                                            {formData.planStart && <button onClick={()=>setFormData({...formData, actStart:formData.planStart, actEnd:formData.planEnd})} className="w-full text-xs bg-purple-50 text-purple-500 py-2 rounded-xl font-bold dashed border border-purple-200">⬇️ 帶入班表 ({formData.planStart}~{formData.planEnd})</button>}
                                             <div>
                                                 <label className="text-xs font-bold text-pink-400 pl-2">實際工作時間</label>
                                                 <div className="flex items-center gap-2 mt-1"><input type="time" value={formData.actStart} onChange={e=>setFormData({...formData, actStart:e.target.value})} className="input-cute text-center bg-pink-50 text-pink-600"/><span className="text-pink-300">~</span><input type="time" value={formData.actEnd} onChange={e=>setFormData({...formData, actEnd:e.target.value})} className="input-cute text-center bg-pink-50 text-pink-600"/></div>
