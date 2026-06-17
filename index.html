@@ -24,7 +24,6 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 
     <style>
@@ -38,7 +37,6 @@
         .modal-safe-top { margin-top: max(env(safe-area-inset-top), 60px); }
         ::-webkit-scrollbar { width: 0px; background: transparent; }
         input, textarea, select { font-size: 16px !important; }
-        /* 粉色系元件 */
         .input-cute { width: 100%; background: #FFF5F7; border-radius: 1rem; padding: 0.8rem; font-weight: bold; color: #9D174D; outline: none; border: 2px solid transparent; transition: all 0.2s; }
         .input-cute:focus { background: white; border-color: #FBCFE8; box-shadow: 0 0 0 2px #FCE7F3; }
         .dark .input-cute { background: #1e293b; color: #f472b6; border-color: #334155; }
@@ -71,6 +69,7 @@
         };
     </script>
 
+    <!-- 絕對沒有 import 的 Firebase Compat 載入寫法 -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -87,7 +86,6 @@
 
             firebase.initializeApp(firebaseConfig);
             
-            // 將 Compat 方法包裝成原先 React 習慣的寫法
             window.fbAuth = firebase.auth();
             window.fbDb = firebase.firestore();
             
@@ -109,7 +107,6 @@
             });
 
             window.isFirebaseInitialized = true;
-            window.dispatchEvent(new Event('firebase-ready'));
         } catch (e) {
             console.error("Firebase Init Error:", e);
             if (window.onerror) window.onerror(e.message || "Firebase 載入失敗", null, null);
@@ -461,7 +458,6 @@
                         {(isAdmin || s.adder === userEmail) && (
                             <div className="flex gap-2">
                                 <button onClick={() => openEditModal(s, dateKey, zoneId)} className="text-blue-400 text-lg">✎</button>
-                                <button onClick={() => openAddModal(setShowAddModal(true))} className="text-green-400 text-lg">📋</button>
                                 <button onClick={() => handleDeleteSchedule(dateKey, zoneId, s.id)} className="text-red-400 text-lg">🗑️</button>
                             </div>
                         )}
@@ -861,6 +857,59 @@
                 setModalTab(entry.planStart && !entry.actStart ? 'act' : 'act');
             };
 
+            const triggerDeleteEntry = () => {
+                setConfirmModal({
+                    isOpen: true,
+                    message: "確定要刪除這天的所有紀錄嗎？(無法復原喔)",
+                    onConfirm: () => handleDeleteEntry()
+                });
+            };
+
+            const handleDeleteEntry = async () => {
+                const key = formatDateKey(selectedDate);
+                const newEntries = { ...entries };
+                delete newEntries[key];
+                setEntries(newEntries);
+                setSelectedDate(null);
+                setConfirmModal({ isOpen: false });
+                await saveData({newEntries});
+            };
+
+            const prepareCopyCandidates = () => {
+                if (!formData.planStart || !formData.planEnd) return alert("請先填寫上班和下班時間喔 🐱");
+                const candidates = [];
+                const year = selectedDate.getFullYear();
+                const month = selectedDate.getMonth();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                for(let d = 1; d <= daysInMonth; d++) {
+                    const date = new Date(year, month, d);
+                    if (date > selectedDate) { candidates.push(date); }
+                }
+                setCopyCandidates(candidates);
+                setSelectedCopyDates([]);
+                setShowCopySelector(true);
+            };
+
+            const executeCopy = async () => {
+                if (selectedCopyDates.length === 0) return alert("請至少選擇一天喔！");
+                const newEntries = { ...entries };
+                const planDuration = calculateDuration(formData.planStart, formData.planEnd);
+                selectedCopyDates.forEach(key => {
+                    const existing = newEntries[key] || {};
+                    newEntries[key] = { 
+                        ...existing, 
+                        planStart: formData.planStart, 
+                        planEnd: formData.planEnd, 
+                        planHours: planDuration,
+                        planLocations: formData.planLocations 
+                    };
+                });
+                setEntries(newEntries);
+                await saveData({newEntries});
+                setShowCopySelector(false);
+                alert(`成功複製到 ${selectedCopyDates.length} 個日子！`);
+            };
+
             const handleSaveEntry = async () => {
                 const key = formatDateKey(selectedDate); const rateToUse = selectedDate.getFullYear() >= 2026 ? hourlyRate2026 : hourlyRate2025;
                 const newEntries = { ...entries }; const actDuration = calculateDuration(formData.actStart, formData.actEnd);
@@ -915,9 +964,25 @@
             if (isAuthChecking) return <div className="h-screen flex items-center justify-center text-pink-300 font-bold bg-[#FFF0F5]">🐰 資料庫連線中...</div>;
             if (!user) return <LoginView />;
 
+            const CustomModal = () => {
+                if (!confirmModal.isOpen) return null;
+                return (
+                    <div className="fixed inset-0 bg-black/50 z-[60] flex items-start justify-center p-4 modal-safe-top">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-xs rounded-3xl p-6 shadow-2xl transform scale-100 transition-all animate-[fadeIn_0.2s]">
+                            <div className="text-center mb-4"><div className="text-4xl mb-2">🐰</div><h3 className="text-lg font-black text-stone-700 dark:text-stone-200">{confirmModal.message}</h3></div>
+                            <div className="flex gap-3">
+                                <button onClick={() => setConfirmModal({isOpen:false})} className="flex-1 py-3 bg-stone-100 dark:bg-slate-700 text-stone-500 dark:text-stone-300 rounded-xl font-bold">取消</button>
+                                <button onClick={confirmModal.onConfirm} className="flex-1 py-3 bg-red-400 text-white rounded-xl font-bold shadow-md shadow-red-100">確定</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
             return (
                 <div className={`min-h-screen pb-safe-area overflow-x-hidden ${isDarkMode ? 'dark' : ''}`}>
                     {toast && <div className="toast">{toast}</div>}
+                    <CustomModal />
                     <header className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 shadow-sm flex flex-col items-center justify-center sticky top-0 z-20 rounded-b-[2rem] header-safe w-full max-w-[500px] mx-auto">
                         <h1 className="text-lg font-black text-[#9D174D] dark:text-pink-300">{appTitle}</h1>
                         <div className="text-[10px] font-bold text-pink-400 mt-1 text-center animate-pulse">{cheer}</div>
@@ -944,7 +1009,7 @@
                         <div className="fixed inset-0 bg-pink-900/20 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4">
                             <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl animate-[slideUp_0.4s] max-h-[90vh] overflow-y-auto">
                                 <div className="flex justify-between items-center mb-4">
-                                    <div className="flex items-center gap-3"><h3 className="text-xl font-black text-[#9D174D] dark:text-pink-300">{selectedDate.getMonth()+1}/{selectedDate.getDate()}</h3></div>
+                                    <div className="flex items-center gap-3"><h3 className="text-xl font-black text-[#9D174D] dark:text-pink-300">{selectedDate.getMonth()+1}/{selectedDate.getDate()}</h3>{(entries[formatDateKey(selectedDate)]) && <button onClick={triggerDeleteEntry} className="bg-red-50 p-2 rounded-full text-red-400 hover:bg-red-100 transition-colors">🗑️</button>}</div>
                                     <button onClick={()=>setSelectedDate(null)} className="bg-pink-50 p-2 rounded-full text-pink-400">✕</button>
                                 </div>
                                 <div className="flex bg-[#FFF5F7] dark:bg-slate-700 rounded-xl p-1 mb-4">
@@ -957,6 +1022,16 @@
                                             <div><label className="text-xs font-bold text-pink-400 pl-2">班表時間</label><div className="flex items-center gap-2 mt-1"><input type="time" value={formData.planStart} onChange={e=>setFormData({...formData, planStart:e.target.value})} className="input-cute text-center"/><span className="text-pink-200">~</span><input type="time" value={formData.planEnd} onChange={e=>setFormData({...formData, planEnd:e.target.value})} className="input-cute text-center"/></div></div>
                                             {formData.planStart && formData.planEnd && isOvernight(formData.planStart, formData.planEnd) && (<div className="text-[10px] text-orange-400 font-bold bg-orange-50 px-2 py-1 rounded-lg mt-1 text-center">⚠️ 跨日 +1</div>)}
                                             <div><label className="text-xs font-bold text-pink-300 pl-2">預計地點</label><div className="grid grid-cols-2 gap-2 mt-1">{locations.map(l=><button key={l.id} onClick={()=>{const n=formData.planLocations.includes(l.id)?formData.planLocations.filter(i=>i!==l.id):[...formData.planLocations,l.id];setFormData({...formData,planLocations:n})}} className={`p-3 rounded-2xl border-2 font-bold text-sm flex gap-2 ${formData.planLocations.includes(l.id)?'bg-[#9D174D] text-white border-[#9D174D]':'bg-white dark:bg-slate-700 text-stone-300'}`}>{l.icon} {l.name}</button>)}</div></div>
+                                            
+                                            {!showCopySelector ? (
+                                                <button onClick={prepareCopyCandidates} className="w-full text-xs bg-pink-50 text-pink-500 py-3 rounded-xl font-bold dashed border border-purple-200 hover:bg-pink-100">🔄 複製此班表到其他天</button>
+                                            ) : (
+                                                <div className="bg-pink-50 p-3 rounded-xl border border-pink-100">
+                                                    <div className="text-xs font-bold text-pink-400 mb-2">請勾選要複製的日期：</div>
+                                                    <div className="grid grid-cols-3 gap-2 mb-3 max-h-40 overflow-y-auto">{copyCandidates.map(d => { const k = formatDateKey(d); const isSel = selectedCopyDates.includes(k); return (<button key={k} onClick={() => setSelectedCopyDates(prev => isSel ? prev.filter(x=>x!==k) : [...prev, k])} className={`p-2 rounded-lg text-[10px] font-bold transition-all ${isSel ? 'bg-pink-500 text-white' : 'bg-white text-pink-300'}`}>{d.getMonth()+1}/{d.getDate()} ({WEEKDAYS[d.getDay()]})</button>) })}</div>
+                                                    <div className="flex gap-2"><button onClick={()=>setShowCopySelector(false)} className="flex-1 py-2 bg-white text-stone-400 rounded-lg text-xs font-bold">取消</button><button onClick={executeCopy} className="flex-1 py-2 bg-pink-500 text-white rounded-lg text-xs font-bold">確認複製 ✨</button></div>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="space-y-4 animate-[fadeIn_0.2s]">
